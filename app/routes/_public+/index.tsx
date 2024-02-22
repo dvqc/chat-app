@@ -51,6 +51,7 @@ export default function Index() {
                     >
                         This web app is built using{' '}
                         <a href="https://www.epicweb.dev/stack"
+                            target='_blank'
                             className="underline hover:no-underline"
                         >
                             The Epic Stack

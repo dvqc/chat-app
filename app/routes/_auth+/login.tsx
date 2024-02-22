@@ -320,6 +320,7 @@ export default function LoginPage() {
 									className="w-full"
 									status={isPending ? 'pending' : form.status ?? 'idle'}
 									type="submit"
+                                    variant={"secondary"}
 									disabled={isPending}
 								>
 									Log in

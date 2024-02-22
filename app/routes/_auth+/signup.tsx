@@ -160,6 +160,7 @@ export default function SignupRoute() {
 						className="w-full"
 						status={isPending ? 'pending' : form.status ?? 'idle'}
 						type="submit"
+                        variant={"secondary"}
 						disabled={isPending}
 					>
 						Submit
