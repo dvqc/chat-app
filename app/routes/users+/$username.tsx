@@ -36,7 +36,7 @@ export default function ProfileRoute() {
 	const isLoggedInUser = data.user.id === loggedInUser?.id
 
 	return (
-		<div className="container mb-48 mt-36 flex flex-col items-center justify-center">
+		<div className="container max-w-lg mb-48 mt-36 flex flex-col items-center justify-center">
 			<Spacer size="4xs" />
 
 			<div className="container flex flex-col items-center rounded-3xl bg-muted p-12">
@@ -74,8 +74,8 @@ export default function ProfileRoute() {
 						{isLoggedInUser ? (
 							<>
 								<Button asChild>
-									<Link to="notes" prefetch="intent">
-										My notes
+									<Link to="channels" prefetch="intent">
+										My channels 
 									</Link>
 								</Button>
 								<Button asChild>
@@ -86,8 +86,8 @@ export default function ProfileRoute() {
 							</>
 						) : (
 							<Button asChild>
-								<Link to="notes" prefetch="intent">
-									{userDisplayName}'s notes
+								<Link to="channels" prefetch="intent">
+									{userDisplayName}'s channels 
 								</Link>
 							</Button>
 						)}
@@ -101,10 +101,10 @@ export default function ProfileRoute() {
 export const meta: MetaFunction<typeof loader> = ({ data, params }) => {
 	const displayName = data?.user.name ?? params.username
 	return [
-		{ title: `${displayName} | Epic Notes` },
+		{ title: `${displayName} | Chat App` },
 		{
 			name: 'description',
-			content: `Profile of ${displayName} on Epic Notes`,
+			content: `Profile of ${displayName} on Chat App`,
 		},
 	]
 }

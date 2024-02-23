@@ -56,6 +56,7 @@ import { type Theme, setTheme, getTheme } from './utils/theme.server.ts'
 import { makeTimings, time } from './utils/timing.server.ts'
 import { getToast } from './utils/toast.server.ts'
 import { useOptionalUser, useUser } from './utils/user.ts'
+import Logo from './components/logo.tsx'
 
 export const links: LinksFunction = () => {
     return [
@@ -220,7 +221,6 @@ function Document({
 function App() {
     const data = useLoaderData<typeof loader>()
     const nonce = useNonce()
-    const user = useOptionalUser()
     const theme = useTheme()
     const matches = useMatches()
     const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
@@ -229,29 +229,7 @@ function App() {
     return (
         <Document nonce={nonce} theme={theme} env={data.ENV}>
             <div className="flex h-screen flex-col justify-between">
-                <header className="container py-6">
-                    <nav className="flex flex-wrap items-center justify-between gap-4 sm:flex-nowrap md:gap-8">
-                        <Logo />
-                        <div className="flex items-center gap-10">
-                            {user ? (
-                                <UserDropdown />
-                            ) : (
-                                <Button asChild variant="default" size="lg">
-                                    <Link to="/login">Log In</Link>
-                                </Button>
-                            )}
-                        </div>
-                    </nav>
-                </header>
-
-                <div className="flex-1">
-                    <Outlet />
-                </div>
-
-                <div className="container flex justify-between pb-5">
-                    <Logo />
-                    <ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
-                </div>
+                <Outlet />
             </div>
             <EpicToaster closeButton position="top-center" theme={theme} />
             <EpicProgress />
@@ -259,18 +237,6 @@ function App() {
     )
 }
 
-function Logo() {
-    return (
-        <Link to="/" className="group grid leading-snug">
-            <Icon name='logo' size='lg' className="font-light transition group-hover:translate-x-1">
-                <span className='text-foreground text-sm transition group-hover:translate-x-1'>devChallenges</span>
-            </Icon>
-            <span className="font-bold transition group-hover:-translate-x-1">
-                Chat App
-            </span>
-        </Link>
-    )
-}
 
 function AppWithProviders() {
     const data = useLoaderData<typeof loader>()
@@ -283,66 +249,6 @@ function AppWithProviders() {
 
 export default withSentry(AppWithProviders)
 
-function UserDropdown() {
-    const user = useUser()
-    const submit = useSubmit()
-    const formRef = useRef<HTMLFormElement>(null)
-    return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button asChild variant="secondary">
-                    <Link
-                        to={`/users/${user.username}`}
-                        // this is for progressive enhancement
-                        onClick={e => e.preventDefault()}
-                        className="flex items-center gap-2"
-                    >
-                        <img
-                            className="h-8 w-8 rounded-full object-cover"
-                            alt={user.name ?? user.username}
-                            src={getUserImgSrc(user.image?.id)}
-                        />
-                        <span className="text-body-sm font-bold">
-                            {user.name ?? user.username}
-                        </span>
-                    </Link>
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuPortal>
-                <DropdownMenuContent sideOffset={8} align="start">
-                    <DropdownMenuItem asChild>
-                        <Link prefetch="intent" to={`/users/${user.username}`}>
-                            <Icon className="text-body-md" name="avatar">
-                                Profile
-                            </Icon>
-                        </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                        <Link prefetch="intent" to={`/users/${user.username}/notes`}>
-                            <Icon className="text-body-md" name="pencil-2">
-                                Notes
-                            </Icon>
-                        </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                        asChild
-                        // this prevents the menu from closing before the form submission is completed
-                        onSelect={event => {
-                            event.preventDefault()
-                            submit(formRef.current)
-                        }}
-                    >
-                        <Form action="/logout" method="POST" ref={formRef}>
-                            <Icon className="text-body-md" name="exit">
-                                <button type="submit">Logout</button>
-                            </Icon>
-                        </Form>
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenuPortal>
-        </DropdownMenu>
-    )
-}
 
 /**
  * @returns the user's theme preference, or the client hint theme if the user
@@ -377,50 +283,6 @@ export function useOptimisticThemeMode() {
     }
 }
 
-function ThemeSwitch({ userPreference }: { userPreference?: Theme | null }) {
-    const fetcher = useFetcher<typeof action>()
-
-    const [form] = useForm({
-        id: 'theme-switch',
-        lastResult: fetcher.data?.result,
-    })
-
-    const optimisticMode = useOptimisticThemeMode()
-    const mode = optimisticMode ?? userPreference ?? 'system'
-    const nextMode =
-        mode === 'system' ? 'light' : mode === 'light' ? 'dark' : 'system'
-    const modeLabel = {
-        light: (
-            <Icon name="sun">
-                <span className="sr-only">Light</span>
-            </Icon>
-        ),
-        dark: (
-            <Icon name="moon">
-                <span className="sr-only">Dark</span>
-            </Icon>
-        ),
-        system: (
-            <Icon name="laptop">
-                <span className="sr-only">System</span>
-            </Icon>
-        ),
-    }
-
-    return (
-        <fetcher.Form method="POST" {...getFormProps(form)}>
-            <input type="hidden" name="theme" value={nextMode} />
-            <div className="flex gap-2">
-                <button
-                    type="submit"
-                    className="flex h-8 w-8 cursor-pointer items-center justify-center"
-                >
-                    {modeLabel[mode]}
-                </button>
-            </div>
-        </fetcher.Form>
-    )
-}
 
 export function ErrorBoundary() {
     // the nonce doesn't rely on the loader so we can access that

@@ -5,6 +5,7 @@ export type IconName =
 	| 'arrow-right'
 	| 'avatar'
 	| 'camera'
+	| 'chat'
 	| 'check'
 	| 'clock'
 	| 'cross-1'

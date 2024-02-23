@@ -5,7 +5,6 @@ import {
     cleanupDb,
     createPassword,
     createUser,
-    getNoteImages,
     getUserImages,
     img,
 } from '#tests/db-utils.ts'
@@ -59,7 +58,6 @@ async function seed() {
 
     const totalUsers = 5
     console.time(`👤 Created ${totalUsers} users...`)
-    const noteImages = await getNoteImages()
     const userImages = await getUserImages()
 
     for (let index = 0; index < totalUsers; index++) {
@@ -89,7 +87,7 @@ async function seed() {
     }
     console.timeEnd(`👤 Created ${totalUsers} users...`)
 
-    console.time(`🐨 Created admin user "kody"`)
+    console.time(`🐨 Created admin user "devx"`)
 
     const kodyImages = await promiseHash({
         kodyUser: img({ filepath: './tests/fixtures/images/user/kody.png' }),
@@ -126,7 +124,7 @@ async function seed() {
             },
         },
     })
-    console.timeEnd(`🐨 Created admin user "kody"`)
+    console.timeEnd(`🐨 Created admin user "devx"`)
 
     console.timeEnd(`🌱 Database has been seeded`)
 }
