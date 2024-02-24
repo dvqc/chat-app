@@ -7,6 +7,7 @@ export type IconName =
 	| 'camera'
 	| 'chat'
 	| 'check'
+	| 'chevron-down'
 	| 'clock'
 	| 'cross-1'
 	| 'dots-horizontal'
