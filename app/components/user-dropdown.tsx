@@ -1,6 +1,6 @@
 import { getUserImgSrc } from "#app/utils/misc"
 import { useUser } from "#app/utils/user"
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuPortal, DropdownMenuContent, DropdownMenuItem } from "./ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuPortal, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "./ui/dropdown-menu"
 import { useSubmit, Link, Form } from "@remix-run/react"
 import { useRef } from "react"
 import { Icon } from "./ui/icon"
@@ -14,40 +14,42 @@ export default function UserDropdown() {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button asChild variant="default">
+                <button className="bg-transparent w-full">
                     <Link
                         to={`/users/${user.username}`}
                         // this is for progressive enhancement
                         onClick={e => e.preventDefault()}
-                        className="flex items-center gap-2"
+                        className="flex items-center space-x-4 justify-between"
                     >
                         <img
-                            className="h-8 w-8 rounded-full object-cover"
+                            className="h-8 w-8 rounded-md object-cover"
                             alt={user.name ?? user.username}
                             src={getUserImgSrc(user.image?.id)}
                         />
-                        <span className="text-body-sm font-bold">
+                        <span className="text-body-sm font-bold text-muted-foreground">
                             {user.name ?? user.username}
                         </span>
+                        <Icon name="chevron-down"/>
                     </Link>
-                </Button>
+                </button>
             </DropdownMenuTrigger>
             <DropdownMenuPortal>
-                <DropdownMenuContent sideOffset={8} align="start">
+                <DropdownMenuContent sideOffset={8} align="start" className="w-44 rounded-xl p-2">
                     <DropdownMenuItem asChild>
-                        <Link prefetch="intent" to={`/users/${user.username}`}>
-                            <Icon className="text-body-md" name="avatar">
+                        <Link prefetch="intent"  to={`/users/${user.username}`}>
+                            <Icon className="text-body-md mr-1 " name="avatar">
                                 Profile
                             </Icon>
                         </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                         <Link prefetch="intent" to={`/users/${user.username}/channels`}>
-                            <Icon className="text-body-md" name="chat">
+                            <Icon className="text-body-md mr-1" name="chat">
                                Channels 
                             </Icon>
                         </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-muted-foreground mx-2 mb-2"/>
                     <DropdownMenuItem
                         asChild
                         // this prevents the menu from closing before the form submission is completed
@@ -56,9 +58,9 @@ export default function UserDropdown() {
                             submit(formRef.current)
                         }}
                     >
-                        <Form action="/logout" method="POST" ref={formRef}>
-                            <Icon className="text-body-md" name="exit">
-                                <button type="submit">Logout</button>
+                        <Form action="/logout" method="POST" ref={formRef} className="group">
+                            <Icon className="text-body-md mr-1 text-red-300 group-hover:text-red-500 transition" name="exit">
+                                <button className="text-red-300 group-hover:text-red-500 transition" type="submit">Logout</button>
                             </Icon>
                         </Form>
                     </DropdownMenuItem>

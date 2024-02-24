@@ -31,7 +31,7 @@ import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { Textarea } from '#app/components/ui/textarea.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
-import { cn, getNoteImgSrc, useIsPending } from '#app/utils/misc.tsx'
+import { cn,  useIsPending } from '#app/utils/misc.tsx'
 
 const titleMinLength = 1
 const titleMaxLength = 100
@@ -297,7 +297,7 @@ function ImageChooser({ meta }: { meta: FieldMetadata<ImageFieldset> }) {
 	const fields = meta.getFieldset()
 	const existingImage = Boolean(fields.id.initialValue)
 	const [previewImage, setPreviewImage] = useState<string | null>(
-		fields.id.initialValue ? getNoteImgSrc(fields.id.initialValue) : null,
+		fields.id.initialValue ?  "" : null,
 	)
 	const [altText, setAltText] = useState(fields.altText.initialValue ?? '')
 

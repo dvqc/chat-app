@@ -23,7 +23,7 @@ import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
-import { getNoteImgSrc, useIsPending } from '#app/utils/misc.tsx'
+import { useIsPending } from '#app/utils/misc.tsx'
 import { requireUserWithPermission } from '#app/utils/permissions.server.ts'
 import { redirectWithToast } from '#app/utils/toast.server.ts'
 import { userHasPermission, useOptionalUser } from '#app/utils/user.ts'
@@ -114,17 +114,17 @@ export default function NoteRoute() {
 			<h2 className="mb-2 pt-12 text-h2 lg:mb-6">{data.note.title}</h2>
 			<div className={`${displayBar ? 'pb-24' : 'pb-12'} overflow-y-auto`}>
 				<ul className="flex flex-wrap gap-5 py-5">
-					{data.note.images.map(image => (
+					{/* data.note.images?.map(image => (
 						<li key={image.id}>
 							<a href={getNoteImgSrc(image.id)}>
 								<img
-									src={getNoteImgSrc(image.id)}
+									src={""}
 									alt={image.altText ?? ''}
 									className="h-32 w-32 rounded-lg object-cover"
 								/>
 							</a>
 						</li>
-					))}
+					))*/}
 				</ul>
 				<p className="whitespace-break-spaces text-sm md:text-lg">
 					{data.note.content}
