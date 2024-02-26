@@ -8,6 +8,21 @@ import { type LoaderFunctionArgs, json } from "@remix-run/server-runtime";
 export async function loader({ request, params }: LoaderFunctionArgs) {
     await requireUserId(request)
     const channel = await prisma.channel.findFirst({
+        include: {
+            private: {
+                include: {
+                    members: {
+                        include: {
+                            user: {
+                                select: {
+                                    name: true, image: true, username: true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         where: { name: params.channelName }
     })
 
@@ -37,7 +52,9 @@ export default function ChannelPage() {
                     <p className="text-base font-normal">{"Pellentesque sagittis elit enim, sit amet ultrices tellus accumsan quis. In gravida mollis purus, at interdum arcu tempor non"}</p>
                     <h2 className="text-foreground text-lg font-bold">Members</h2>
                     <ul>
-                        {}
+                        {channel.private?.members.map(member =>
+                            <li key={member.userId}>{member.user.name}</li>
+                        )}
                     </ul>
                 </div>
             </aside>
