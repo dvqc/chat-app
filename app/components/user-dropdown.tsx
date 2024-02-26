@@ -5,6 +5,7 @@ import { useSubmit, Link, Form } from "@remix-run/react"
 import { useRef } from "react"
 import { Icon } from "./ui/icon"
 import { Button } from "./ui/button"
+import UserImage from "./user-image"
 
 export default function UserDropdown() {
     const user = useUser()
@@ -21,22 +22,18 @@ export default function UserDropdown() {
                         onClick={e => e.preventDefault()}
                         className="flex items-center space-x-4 justify-between"
                     >
-                        <img
-                            className="h-8 w-8 rounded-md object-cover"
-                            alt={user.name ?? user.username}
-                            src={getUserImgSrc(user.image?.id)}
-                        />
+                        <UserImage imageId={user.image?.id} alt={user.name ?? user.username} />
                         <span className="text-body-sm font-bold text-muted-foreground">
                             {user.name ?? user.username}
                         </span>
-                        <Icon name="chevron-down"/>
+                        <Icon name="chevron-down" />
                     </Link>
                 </button>
             </DropdownMenuTrigger>
             <DropdownMenuPortal>
                 <DropdownMenuContent sideOffset={8} align="start" className="w-44 rounded-xl p-2">
                     <DropdownMenuItem asChild>
-                        <Link prefetch="intent"  to={`/users/${user.username}`}>
+                        <Link prefetch="intent" to={`/users/${user.username}`}>
                             <Icon className="text-body-md mr-1 " name="avatar">
                                 Profile
                             </Icon>
@@ -45,11 +42,11 @@ export default function UserDropdown() {
                     <DropdownMenuItem asChild>
                         <Link prefetch="intent" to={`/users/${user.username}/channels`}>
                             <Icon className="text-body-md mr-1" name="chat">
-                               Channels 
+                                Channels
                             </Icon>
                         </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-muted-foreground mx-2 mb-2"/>
+                    <DropdownMenuSeparator className="bg-muted-foreground mx-2 mb-2" />
                     <DropdownMenuItem
                         asChild
                         // this prevents the menu from closing before the form submission is completed

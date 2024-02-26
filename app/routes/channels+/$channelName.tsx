@@ -1,8 +1,10 @@
+import { Button } from "#app/components/ui/button";
+import UserDropdown from "#app/components/user-dropdown";
 import { requireUserId } from "#app/utils/auth.server";
 import { prisma } from "#app/utils/db.server";
 import { getUserImgSrc } from "#app/utils/misc";
 import { invariantResponse } from "@epic-web/invariant";
-import { useLoaderData } from "@remix-run/react";
+import { Link, useLoaderData } from "@remix-run/react";
 import { type LoaderFunctionArgs, json } from "@remix-run/server-runtime";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -15,7 +17,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
                         include: {
                             user: {
                                 select: {
-                                    name: true, image: true, username: true
+                                    id: true, name: true, username: true, image: { select: { id: true, altText: true } }
                                 }
                             }
                         }
@@ -43,19 +45,35 @@ export default function ChannelPage() {
 
     return (
         <div className="flex h-full">
-            <aside className="max-w-xs space-y-5 w-screen flex flex-col  bg-background  max-h-screen overflow-y-auto">
+            <aside className="max-w-xs space-y-5 w-screen flex flex-col  bg-background  max-h-screen">
                 <div className="flex justify-between items-center  shadow-lg shadow-black/30 px-10 py-4">
                     <button className="text-foreground text-lg font-bold"> {"<"} All Channels</button>
                 </div>
                 <div className="flex flex-col flex-grow px-10 space-y-4">
-                    <h2 className="text-foreground text-lg font-bold">{channel.name}</h2>
-                    <p className="text-base font-normal">{"Pellentesque sagittis elit enim, sit amet ultrices tellus accumsan quis. In gravida mollis purus, at interdum arcu tempor non"}</p>
-                    <h2 className="text-foreground text-lg font-bold">Members</h2>
-                    <ul>
-                        {channel.private?.members.map(member =>
-                            <li key={member.userId}>{member.user.name}</li>
-                        )}
-                    </ul>
+                    <div>
+                        <h2 className="text-foreground text-lg font-bold my-3">{channel.name}</h2>
+                        <p className="text-base font-normal">{"Pellentesque sagittis elit enim, sit amet ultrices tellus accumsan quis. In gravida mollis purus, at interdum arcu tempor non"}</p>
+                    </div>
+                    <div className="flex-grow flex flex-col h-10 max-h-full">
+                        <h2 className="text-foreground text-lg font-bold my-3">Members</h2>
+                        <ul className="space-y-4 flex-grow overflow-y-auto h-10 max-h-full">
+                            {channel.private?.members.map(member =>
+                                <li key={member.userId} >
+                                    <Button variant={"link"} className="transition text-muted-foreground hover:text-foreground">
+                                        <Link to={`/users/${member.user.username}`} className="flex items-center space-x-4 font-semibold">
+                                            <img
+                                                className="w-10 h-10 object-cover rounded"
+                                                src={getUserImgSrc(member.user.image?.id)}
+                                                alt={member.user.image?.altText ?? 'user profile picture'}
+                                            />
+                                            <p>{member.user.name}</p>
+                                        </Link>
+                                    </Button>
+                                </li>
+                            )}
+                        </ul>
+                    </div>
+                    <div className="flex justify-center py-2"><UserDropdown /></div>
                 </div>
             </aside>
             <main className="flex-1 bg-muted">

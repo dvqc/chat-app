@@ -19,7 +19,7 @@ const ChannelSearchResultSchema = z.object({
 const ChannelSearchResultsSchema = z.array(ChannelSearchResultSchema)
 
 export async function loader({ request }: LoaderFunctionArgs) {
-    await requireUserId(request)
+    const userId = await requireUserId(request)
     const searchTerm = new URL(request.url).searchParams.get('search')
     if (searchTerm === '') {
         return redirect('/channels')
@@ -27,11 +27,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
     const like = `%${searchTerm ?? ''}%`
     const rawChannels = await prisma.$queryRaw`
-		SELECT Channel.id, Channel.name, ChannelImage.id AS ImageId
+		SELECT DISTINCT Channel.id, Channel.name, ChannelImage.id AS ImageId
 		FROM Channel
         LEFT JOIN ChannelImage ON ChannelImage.channelId = Channel.id
+        LEFT JOIN PrivateChannel on PrivateChannel.channelId = Channel.id
+        LEFT JOIN Membership on Membership.channelId = PrivateChannel.channelId
 		WHERE Channel.name LIKE ${like}
-        AND Channel.isPrivate = 0
+        AND (PrivateChannel.channelId is null OR Membership.userId = ${userId} OR Channel.ownerId = ${userId})
 		LIMIT 50
 	`
 
