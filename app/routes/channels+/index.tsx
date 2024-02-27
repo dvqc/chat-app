@@ -106,14 +106,14 @@ export default function ChannelsLayout() {
                             <ErrorList errors={['There was an error parsing the results']} />
                         ) : null}
                     </div>
-                    <div className="flex justify-center py-2"><UserDropdown /></div>
                 </div>
+                <div className="px-10 bg-black/40 flex justify-center py-2"><UserDropdown /></div>
             </aside>
             <main className="flex-1 bg-muted">
                 <div className="py-4 px-20 font-bold text-lg shadow-lg shadow-black/30 "><Icon size="lg" name="logo"></Icon>{" "}devChallenges Chat App</div>
                 <section className="px-20 py-14">
                     <h1 className="text-4xl">Welcome to chat 🎊🎉</h1>
-                    <img className="my-10 max-w-xl w-full aspect-auto" src="/img/welcome.gif" alt="welcome meme"/>
+                    <img className="my-10 max-w-xl w-full aspect-auto" src="/img/welcome.gif" alt="welcome meme" />
                 </section>
             </main>
         </div>

@@ -1,11 +1,19 @@
 import { Button } from "#app/components/ui/button";
+import { Icon } from "#app/components/ui/icon";
+import { Input } from "#app/components/ui/input";
+import { StatusButton } from "#app/components/ui/status-button";
 import UserDropdown from "#app/components/user-dropdown";
-import { requireUserId } from "#app/utils/auth.server";
+import UserImage from "#app/components/user-image";
+import { getUserId, requireUserId } from "#app/utils/auth.server";
 import { prisma } from "#app/utils/db.server";
-import { getUserImgSrc } from "#app/utils/misc";
+import { useIsPending } from "#app/utils/misc";
+import { useForm } from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod";
 import { invariantResponse } from "@epic-web/invariant";
-import { Link, useLoaderData } from "@remix-run/react";
-import { type LoaderFunctionArgs, json } from "@remix-run/server-runtime";
+import { Form, Link, useActionData, useLoaderData } from "@remix-run/react";
+import { type LoaderFunctionArgs, json, ActionFunctionArgs } from "@remix-run/server-runtime";
+import { formatRelative, secondsToHours, sub } from "date-fns";
+import { z } from "zod";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
     await requireUserId(request)
@@ -30,7 +38,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
     const messages = await prisma.message.findMany({
         where: { channel: { name: params.channelName } },
-        include: { user: { select: { id: true, username: true, image: { select: { id: true } } } } },
+        include: { user: { select: { id: true, username: true, image: { select: { id: true, altText: true } } } } },
         orderBy: { createdAt: 'desc' },
         take: 50
     })
@@ -40,8 +48,35 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     return json({ channel: channel, messages } as const)
 }
 
+const NewMessageSchema = z.object({
+    text: z.string().min(1).max(1000),
+})
+
+export async function action({ request }: ActionFunctionArgs) {
+    const formData = await request.formData()
+    const userId = await getUserId(request)
+    const user = await prisma.user.findFirst({ where: { id: userId } })
+
+    const submission = parseWithZod(formData, { schema: NewMessageSchema })
+
+    if (submission.status !== 'success') {
+        return json(
+            { result: submission.reply() },
+            { status: submission.status === 'error' ? 400 : 200 },
+        )
+    }
+
+    await prisma.message.create({ data: submission.value })
+    return null
+}
+
 export default function ChannelPage() {
     const { channel, messages } = useLoaderData<typeof loader>()
+    const actionData = useActionData<typeof action>()
+    const isPending = useIsPending()
+
+
+    console.log(actionData)
 
     return (
         <div className="flex h-full">
@@ -61,10 +96,9 @@ export default function ChannelPage() {
                                 <li key={member.userId} >
                                     <Button variant={"link"} className="transition text-muted-foreground hover:text-foreground">
                                         <Link to={`/users/${member.user.username}`} className="flex items-center space-x-4 font-semibold">
-                                            <img
-                                                className="w-10 h-10 object-cover rounded"
-                                                src={getUserImgSrc(member.user.image?.id)}
-                                                alt={member.user.image?.altText ?? 'user profile picture'}
+                                            <UserImage
+                                                imageId={member.user.image?.id}
+                                                alt={member.user.image?.altText}
                                             />
                                             <p>{member.user.name}</p>
                                         </Link>
@@ -73,21 +107,43 @@ export default function ChannelPage() {
                             )}
                         </ul>
                     </div>
-                    <div className="flex justify-center py-2"><UserDropdown /></div>
                 </div>
+                <div className="px-10 bg-black/40 flex justify-center py-2"><UserDropdown /></div>
             </aside>
-            <main className="flex-1 bg-muted">
+            <main className="flex-1 bg-muted relative">
                 <div className="py-4 px-20 font-bold text-lg shadow-lg shadow-black/30 ">
                     <h1>{channel.name}</h1>
                 </div>
                 <section className="px-20 py-14">
                     {messages.map(message =>
                         <div key={message.id} className="flex items-center space-x-4">
-                            <img className="w-10 h-10 rounded object-cover" src={getUserImgSrc(message.user.image?.id)} />
-                            <div>{message.text}</div>
+                            <UserImage imageId={message.user.image?.id} alt={message.user.image?.altText} />
+                            <div className="">
+                                <div className="flex space-x-4 items-center">
+                                    <p className="font-semibold text-lg text-muted-foreground">{message.user.username}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {formatRelative(new Date(message.createdAt), new Date())}
+                                    </p>
+                                </div>
+                                <p className="text-foreground text-lg font-medium">{message.text}</p>
+                            </div>
                         </div>
                     )}
                 </section>
+                <Form method="POST" className="absolute p-2 left-20 right-20 bottom-10 flex items-center bg-muted-foreground/25 rounded-lg border-background border-1">
+                    <input
+                        name="text"
+                        type="text"
+                        className="border-none w-full bg-transparent outline-none px-4 text-lg" />
+                    <StatusButton
+                        status={isPending ? 'pending' : 'idle'}
+                        type="submit"
+                        variant={"secondary"}
+                        disabled={isPending}
+                        className="h-8 w-8 p-2">
+                        <Icon name="send" />
+                    </StatusButton>
+                </Form>
             </main>
         </div>
     )
