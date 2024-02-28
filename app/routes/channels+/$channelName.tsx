@@ -1,18 +1,16 @@
 import { Button } from "#app/components/ui/button";
 import { Icon } from "#app/components/ui/icon";
-import { Input } from "#app/components/ui/input";
 import { StatusButton } from "#app/components/ui/status-button";
 import UserDropdown from "#app/components/user-dropdown";
 import UserImage from "#app/components/user-image";
-import { getUserId, requireUserId } from "#app/utils/auth.server";
+import { requireUser, requireUserId } from "#app/utils/auth.server";
 import { prisma } from "#app/utils/db.server";
 import { useIsPending } from "#app/utils/misc";
-import { useForm } from "@conform-to/react";
-import { getZodConstraint, parseWithZod } from "@conform-to/zod";
+import { parseWithZod } from "@conform-to/zod";
 import { invariantResponse } from "@epic-web/invariant";
 import { Form, Link, useActionData, useLoaderData } from "@remix-run/react";
-import { type LoaderFunctionArgs, json, ActionFunctionArgs } from "@remix-run/server-runtime";
-import { formatRelative, secondsToHours, sub } from "date-fns";
+import { type LoaderFunctionArgs, json, ActionFunctionArgs, redirect } from "@remix-run/server-runtime";
+import { formatRelative } from "date-fns";
 import { z } from "zod";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -39,7 +37,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     const messages = await prisma.message.findMany({
         where: { channel: { name: params.channelName } },
         include: { user: { select: { id: true, username: true, image: { select: { id: true, altText: true } } } } },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: 'asc' },
         take: 50
     })
 
@@ -52,13 +50,11 @@ const NewMessageSchema = z.object({
     text: z.string().min(1).max(1000),
 })
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request, params }: ActionFunctionArgs) {
+    const user = await requireUser(request)
     const formData = await request.formData()
-    const userId = await getUserId(request)
-    const user = await prisma.user.findFirst({ where: { id: userId } })
 
     const submission = parseWithZod(formData, { schema: NewMessageSchema })
-
     if (submission.status !== 'success') {
         return json(
             { result: submission.reply() },
@@ -66,17 +62,21 @@ export async function action({ request }: ActionFunctionArgs) {
         )
     }
 
-    await prisma.message.create({ data: submission.value })
-    return null
-}
+    const channel = await prisma.channel.findFirst({ where: { name: params.channelName } })
+    invariantResponse(channel, 'Channel not found')
+
+    await prisma.message.create({ data: { ...submission.value, userId: user.id, channelId: channel.id } })
+        return json(
+            { result: submission.reply() },
+            { status: 201 },
+        )
+    }
 
 export default function ChannelPage() {
     const { channel, messages } = useLoaderData<typeof loader>()
     const actionData = useActionData<typeof action>()
     const isPending = useIsPending()
 
-
-    console.log(actionData)
 
     return (
         <div className="flex h-full">
@@ -110,11 +110,11 @@ export default function ChannelPage() {
                 </div>
                 <div className="px-10 bg-black/40 flex justify-center py-2"><UserDropdown /></div>
             </aside>
-            <main className="flex-1 bg-muted relative">
+            <main className="flex-1 bg-muted relative h-screen flex flex-col">
                 <div className="py-4 px-20 font-bold text-lg shadow-lg shadow-black/30 ">
                     <h1>{channel.name}</h1>
                 </div>
-                <section className="px-20 py-14">
+                <section className="px-20 pt-14 pb-28 h-96 flex-1 overflow-y-auto space-y-2">
                     {messages.map(message =>
                         <div key={message.id} className="flex items-center space-x-4">
                             <UserImage imageId={message.user.image?.id} alt={message.user.image?.altText} />
@@ -130,9 +130,10 @@ export default function ChannelPage() {
                         </div>
                     )}
                 </section>
-                <Form method="POST" className="absolute p-2 left-20 right-20 bottom-10 flex items-center bg-muted-foreground/25 rounded-lg border-background border-1">
+                <Form method="POST" className="absolute p-2 left-20 right-20 bottom-10 flex items-center bg-zinc-600 rounded-lg border-background border-1">
                     <input
                         name="text"
+                        autoComplete="off"
                         type="text"
                         className="border-none w-full bg-transparent outline-none px-4 text-lg" />
                     <StatusButton
@@ -140,8 +141,8 @@ export default function ChannelPage() {
                         type="submit"
                         variant={"secondary"}
                         disabled={isPending}
-                        className="h-8 w-8 p-2">
-                        <Icon name="send" />
+                        className="w-8 h-8 ">
+                        <Icon name="send" className="flex items-center" />
                     </StatusButton>
                 </Form>
             </main>

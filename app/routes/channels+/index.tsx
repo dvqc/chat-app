@@ -1,12 +1,11 @@
 import { ErrorList } from "#app/components/forms";
-import Logo from "#app/components/logo";
 import { SearchBar } from "#app/components/search-bar";
 import { Icon } from "#app/components/ui/icon";
 import UserDropdown from "#app/components/user-dropdown";
 import { requireUserId } from "#app/utils/auth.server";
 import { prisma } from "#app/utils/db.server";
 import { getAbbreviation, getChannelImgSrc, useDelayedIsPending } from "#app/utils/misc";
-import { Link, Outlet, useLoaderData } from "@remix-run/react";
+import { Link, useLoaderData } from "@remix-run/react";
 import { LoaderFunctionArgs, json, redirect } from "@remix-run/server-runtime";
 import { z } from "zod";
 
