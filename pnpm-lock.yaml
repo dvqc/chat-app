@@ -200,6 +200,9 @@ dependencies:
   tailwindcss-radix:
     specifier: ^2.8.0
     version: 2.8.0
+  usehooks-ts:
+    specifier: ^2.16.0
+    version: 2.16.0(react@18.2.0)
   zod:
     specifier: ^3.22.4
     version: 3.22.4
@@ -9929,6 +9932,16 @@ packages:
       detect-node-es: 1.1.0
       react: 18.2.0
       tslib: 2.6.2
+    dev: false
+
+  /usehooks-ts@2.16.0(react@18.2.0):
+    resolution: {integrity: sha512-bez95WqYujxp6hFdM/CpRDiVPirZPxlMzOH2QB8yopoKQMXpscyZoxOjpEdaxvV+CAWUDSM62cWnqHE0E/MZ7w==}
+    engines: {node: '>=16.15.0'}
+    peerDependencies:
+      react: ^16.8.0  || ^17 || ^18
+    dependencies:
+      lodash.debounce: 4.0.8
+      react: 18.2.0
     dev: false
 
   /util-deprecate@1.0.2:

@@ -8,9 +8,11 @@ import { prisma } from "#app/utils/db.server";
 import { useIsPending } from "#app/utils/misc";
 import { parseWithZod } from "@conform-to/zod";
 import { invariantResponse } from "@epic-web/invariant";
-import { Form, Link, useActionData, useLoaderData } from "@remix-run/react";
+import { Form, Link, useLoaderData, useRevalidator } from "@remix-run/react";
+import { useInterval } from "usehooks-ts"
 import { type LoaderFunctionArgs, json, ActionFunctionArgs, redirect } from "@remix-run/server-runtime";
 import { formatRelative } from "date-fns";
+import { useEffect, useRef } from "react";
 import { z } from "zod";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -66,17 +68,24 @@ export async function action({ request, params }: ActionFunctionArgs) {
     invariantResponse(channel, 'Channel not found')
 
     await prisma.message.create({ data: { ...submission.value, userId: user.id, channelId: channel.id } })
-        return json(
-            { result: submission.reply() },
-            { status: 201 },
-        )
-    }
+    return json(
+        { result: submission.reply() },
+        { status: 201 },
+    )
+}
 
 export default function ChannelPage() {
     const { channel, messages } = useLoaderData<typeof loader>()
-    const actionData = useActionData<typeof action>()
+    const formRef = useRef<HTMLFormElement>(null)
     const isPending = useIsPending()
+    const revalidator = useRevalidator();
+    const interval = revalidator.state === 'idle' ? 5000 : null
+    useInterval(() => revalidator.revalidate(), interval);
 
+    useEffect(() => {
+        if (!isPending)
+            formRef.current?.reset()
+    }, [isPending])
 
     return (
         <div className="flex h-full">
@@ -130,7 +139,7 @@ export default function ChannelPage() {
                         </div>
                     )}
                 </section>
-                <Form method="POST" className="absolute p-2 left-20 right-20 bottom-10 flex items-center bg-zinc-600 rounded-lg border-background border-1">
+                <Form ref={formRef} method="POST" className="absolute p-2 left-20 right-20 bottom-10 flex items-center bg-zinc-600 rounded-lg border-background border-1">
                     <input
                         name="text"
                         autoComplete="off"
