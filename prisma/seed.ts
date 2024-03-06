@@ -75,7 +75,6 @@ async function seed() {
                             length: faker.number.int({ min: 1, max: 2 }),
                         }).map(() => ({
                             name: faker.word.adjective(),
-                            isPrivate: false
                         })),
                     },
                 },

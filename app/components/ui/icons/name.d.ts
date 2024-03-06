@@ -8,6 +8,7 @@ export type IconName =
 	| 'chat'
 	| 'check'
 	| 'chevron-down'
+	| 'chevron-left'
 	| 'clock'
 	| 'cross-1'
 	| 'dots-horizontal'

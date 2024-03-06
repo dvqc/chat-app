@@ -91,7 +91,11 @@ export default function ChannelPage() {
         <div className="flex h-full">
             <aside className="max-w-xs space-y-5 w-screen flex flex-col  bg-background  max-h-screen">
                 <div className="flex justify-between items-center  shadow-lg shadow-black/30 px-10 py-4">
-                    <button className="text-foreground text-lg font-bold"> {"<"} All Channels</button>
+                    <Button variant="link" className="text-foreground text-lg font-bold">
+                        <Link to={`/channels`} className="flex items-center space-x-4 font-semibold">
+                            <Icon name="chevron-left" className="w-5 h-5 text-foreground" /> All Channels
+                        </Link>
+                    </Button>
                 </div>
                 <div className="flex flex-col flex-grow px-10 space-y-4">
                     <div>
@@ -125,7 +129,7 @@ export default function ChannelPage() {
                 </div>
                 <section className="px-20 pt-14 pb-28 h-96 flex-1 overflow-y-auto space-y-2">
                     {messages.map(message =>
-                        <div key={message.id} className="flex items-center space-x-4">
+                        <div key={message.id} className="flex items-start space-x-4">
                             <UserImage imageId={message.user.image?.id} alt={message.user.image?.altText} />
                             <div className="">
                                 <div className="flex space-x-4 items-center">

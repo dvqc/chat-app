@@ -14,21 +14,19 @@ export default function UserDropdown() {
 
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <button className="bg-transparent w-full">
-                    <Link
-                        to={`/users/${user.username}`}
-                        // this is for progressive enhancement
-                        onClick={e => e.preventDefault()}
-                        className="flex items-center space-x-4 justify-between"
-                    >
-                        <UserImage imageId={user.image?.id} alt={user.name ?? user.username} />
-                        <span className="text-body-sm font-bold text-muted-foreground">
-                            {user.name ?? user.username}
-                        </span>
-                        <Icon name="chevron-down" />
-                    </Link>
-                </button>
+            <DropdownMenuTrigger className="bg-transparent w-full">
+                <Link
+                    to={`/users/${user.username}`}
+                    // this is for progressive enhancement
+                    onClick={e => e.preventDefault()}
+                    className="flex items-center space-x-4 justify-between"
+                >
+                    <UserImage imageId={user.image?.id} alt={user.name ?? user.username} />
+                    <span className="text-body-sm font-bold text-muted-foreground">
+                        {user.name ?? user.username}
+                    </span>
+                    <Icon name="chevron-down" />
+                </Link>
             </DropdownMenuTrigger>
             <DropdownMenuPortal>
                 <DropdownMenuContent sideOffset={8} align="start" className="w-44 rounded-xl p-2">
