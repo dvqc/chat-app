@@ -1,12 +1,20 @@
-import { ErrorList } from "#app/components/forms";
+import { CheckboxField, ErrorList, Field } from "#app/components/forms";
 import { SearchBar } from "#app/components/search-bar";
+import { Button } from "#app/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "#app/components/ui/dialog";
 import { Icon } from "#app/components/ui/icon";
+import { Input } from "#app/components/ui/input";
+import { StatusButton } from "#app/components/ui/status-button";
 import UserDropdown from "#app/components/user-dropdown";
-import { requireUserId } from "#app/utils/auth.server";
+import { requireUser, requireUserId } from "#app/utils/auth.server";
 import { prisma } from "#app/utils/db.server";
+import { checkHoneypot } from "#app/utils/honeypot.server";
 import { getAbbreviation, getChannelImgSrc, useDelayedIsPending } from "#app/utils/misc";
-import { Link, useLoaderData } from "@remix-run/react";
-import { LoaderFunctionArgs, json, redirect } from "@remix-run/server-runtime";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod";
+import { Form, Link, useActionData, useLoaderData } from "@remix-run/react";
+import { ActionFunctionArgs, LoaderFunctionArgs, json, redirect } from "@remix-run/server-runtime";
+import { HoneypotInputs } from "remix-utils/honeypot/react";
 import { z } from "zod";
 
 const ChannelSearchResultSchema = z.object({
@@ -45,25 +53,51 @@ export async function loader({ request }: LoaderFunctionArgs) {
     return json({ status: 'idle', channels: result.data } as const)
 }
 
-export default function ChannelsLayout() {
-    const data = useLoaderData<typeof loader>()
-    const isPending = useDelayedIsPending({
-        formMethod: 'GET',
-        formAction: '/channels',
+const NewChannelSchema = z.object({
+    name: z.string().max(50).min(2),
+    description: z.string().max(500),
+    isPrivate: z.boolean().default(false)
+})
+
+export async function action({ request, params }: ActionFunctionArgs) {
+    const user = await requireUser(request)
+    const formData = await request.formData()
+    checkHoneypot(formData)
+    const submission = parseWithZod(formData, {
+        schema: NewChannelSchema
     })
 
-    if (data.status === 'error') {
-        console.error(data.error)
-    }
+    if (submission.status !== 'success')
+        return json(
+            { result: submission.reply() },
+            { status: 400 },
+        )
+
+    const { isPrivate, ...values } = submission.value
+    await prisma.channel.create({
+        data: { ...values, ownerId: user.id, ...(isPrivate ? {} : {
+            private: {
+                create: {
+                }
+            }
+        })
+    } })
+
+return json(
+    { result: submission.reply() },
+    { status: 201 },
+)
+}
+
+export default function ChannelsLayout() {
+    const data = useLoaderData<typeof loader>()
 
     return (
         <div className="flex h-full">
             <aside className="max-w-xs space-y-5 w-screen flex flex-col  bg-background  max-h-screen overflow-y-auto">
                 <div className="flex justify-between items-center  shadow-lg shadow-black/30 px-10 py-4">
                     <h1 className="text-foreground text-lg font-bold">Channels</h1>
-                    <button className="bg-muted h-6 w-6  text-muted-foreground transition rounded flex justify-center items-center hover:text-foreground">
-                        <Icon name="plus" />
-                    </button>
+                    <CreateChannelDialog />
                 </div>
                 <div className="flex flex-col flex-grow px-10 space-y-4">
                     <SearchBar autoSubmit autoFocus status={data.status} route="/channels" />
@@ -116,5 +150,85 @@ export default function ChannelsLayout() {
                 </section>
             </main>
         </div>
+    )
+}
+
+function CreateChannelDialog() {
+    const actionData = useActionData<typeof action>()
+    const isPending = useDelayedIsPending()
+
+    const [form, fields] = useForm({
+        id: 'new-channel-form',
+        constraint: getZodConstraint(NewChannelSchema),
+        lastResult: actionData?.result,
+        onValidate({ formData }) {
+            return parseWithZod(formData, { schema: NewChannelSchema })
+        },
+        shouldRevalidate: 'onBlur',
+    })
+
+    return (
+        <Dialog>
+            <DialogTrigger
+                className="bg-muted h-6 w-6  text-muted-foreground transition rounded flex justify-center items-center 
+            hover:text-foreground"
+            >
+                <Icon name="plus" />
+            </DialogTrigger>
+            <DialogContent>
+                <Form method="POST" {...getFormProps(form)}>
+                    <DialogHeader>
+                        <DialogTitle className="text-foreground font-semibold text-lg">New Channel</DialogTitle>
+                    </DialogHeader>
+                    <DialogDescription>
+                        <HoneypotInputs />
+                        <Field
+                            labelProps={{ children: 'Name' }}
+                            inputProps={{
+                                ...getInputProps(fields.name, { type: 'text' }),
+                                autoFocus: true,
+                            }}
+                            errors={fields.name.errors}
+                        />
+
+                        <Field
+                            labelProps={{ children: 'Description' }}
+                            inputProps={{
+                                ...getInputProps(fields.description, {
+                                    type: 'text'
+                                }),
+                            }}
+                            errors={fields.description.errors}
+                        />
+
+                        <div className="flex justify-between">
+                            <CheckboxField
+                                labelProps={{
+                                    htmlFor: fields.isPrivate.id,
+                                    children: 'Private',
+                                }}
+                                buttonProps={getInputProps(fields.isPrivate, {
+                                    type: 'checkbox',
+                                })}
+                                errors={fields.isPrivate.errors}
+                            />
+                        </div>
+
+                        <ErrorList errors={form.errors} id={form.errorId} />
+                    </DialogDescription>
+                    <DialogFooter>
+                        <StatusButton
+                            className="w-full"
+                            status={isPending ? 'pending' : form.status ?? 'idle'}
+                            type="submit"
+                            variant={"secondary"}
+                            disabled={isPending}
+                        >
+                            Save
+                        </StatusButton>
+                    </DialogFooter>
+                </Form>
+            </DialogContent>
+        </Dialog >
     )
 }

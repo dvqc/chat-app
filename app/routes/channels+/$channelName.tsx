@@ -91,11 +91,9 @@ export default function ChannelPage() {
         <div className="flex h-full">
             <aside className="max-w-xs space-y-5 w-screen flex flex-col  bg-background  max-h-screen">
                 <div className="flex justify-between items-center  shadow-lg shadow-black/30 px-10 py-4">
-                    <Button variant="link" className="text-foreground text-lg font-bold">
-                        <Link to={`/channels`} className="flex items-center space-x-4 font-semibold">
-                            <Icon name="chevron-left" className="w-5 h-5 text-foreground" /> All Channels
-                        </Link>
-                    </Button>
+                    <Link to={`/channels`} className="flex items-center space-x-4 text-muted-foreground font-semibold transition hover:text-foreground">
+                        <Icon name="chevron-left" className="w-5 h-5 " /> All Channels
+                    </Link>
                 </div>
                 <div className="flex flex-col flex-grow px-10 space-y-4">
                     <div>
