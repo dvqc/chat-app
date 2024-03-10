@@ -1,9 +1,7 @@
 import { CheckboxField, ErrorList, Field } from "#app/components/forms";
 import { SearchBar } from "#app/components/search-bar";
-import { Button } from "#app/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "#app/components/ui/dialog";
 import { Icon } from "#app/components/ui/icon";
-import { Input } from "#app/components/ui/input";
 import { StatusButton } from "#app/components/ui/status-button";
 import UserDropdown from "#app/components/user-dropdown";
 import { requireUser, requireUserId } from "#app/utils/auth.server";
@@ -14,6 +12,7 @@ import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod";
 import { Form, Link, useActionData, useLoaderData } from "@remix-run/react";
 import { ActionFunctionArgs, LoaderFunctionArgs, json, redirect } from "@remix-run/server-runtime";
+import { useEffect, useRef, useState } from "react";
 import { HoneypotInputs } from "remix-utils/honeypot/react";
 import { z } from "zod";
 
@@ -55,7 +54,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 const NewChannelSchema = z.object({
     name: z.string().max(50).min(2),
-    description: z.string().max(500),
+    description: z.string().max(500).optional(),
     isPrivate: z.boolean().default(false)
 })
 
@@ -63,8 +62,22 @@ export async function action({ request, params }: ActionFunctionArgs) {
     const user = await requireUser(request)
     const formData = await request.formData()
     checkHoneypot(formData)
-    const submission = parseWithZod(formData, {
-        schema: NewChannelSchema
+    const submission = await parseWithZod(formData, {
+        schema: NewChannelSchema.superRefine(async (data, ctx) => {
+            const existingChannel = await prisma.channel.findUnique({
+                where: { name: data.name },
+                select: { id: true },
+            })
+            if (existingChannel) {
+                ctx.addIssue({
+                    path: ['name'],
+                    code: z.ZodIssueCode.custom,
+                    message: 'A channel already exists with this name',
+                })
+                return
+            }
+        }),
+        async: true,
     })
 
     if (submission.status !== 'success')
@@ -75,29 +88,32 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
     const { isPrivate, ...values } = submission.value
     await prisma.channel.create({
-        data: { ...values, ownerId: user.id, ...(isPrivate ? {} : {
-            private: {
-                create: {
+        data: {
+            ...values, ownerId: user.id, ...(isPrivate ? {} : {
+                private: {
+                    create: {
+                    }
                 }
-            }
-        })
-    } })
+            })
+        }
+    })
 
-return json(
-    { result: submission.reply() },
-    { status: 201 },
-)
+    return json(
+        { result: { ...submission.reply({ resetForm: true }), ...submission.reply() } },
+        { status: 201 },
+    )
 }
 
 export default function ChannelsLayout() {
     const data = useLoaderData<typeof loader>()
+    const [isOpen, setIsOpen] = useState(false)
 
     return (
         <div className="flex h-full">
             <aside className="max-w-xs space-y-5 w-screen flex flex-col  bg-background  max-h-screen overflow-y-auto">
                 <div className="flex justify-between items-center  shadow-lg shadow-black/30 px-10 py-4">
                     <h1 className="text-foreground text-lg font-bold">Channels</h1>
-                    <CreateChannelDialog />
+                    <CreateChannelDialog {...{ isOpen, setIsOpen }} />
                 </div>
                 <div className="flex flex-col flex-grow px-10 space-y-4">
                     <SearchBar autoSubmit autoFocus status={data.status} route="/channels" />
@@ -153,7 +169,10 @@ export default function ChannelsLayout() {
     )
 }
 
-function CreateChannelDialog() {
+const initialFormValues = { name: '', description: '', isPrivate: false }
+
+function CreateChannelDialog({ isOpen, setIsOpen }:
+    { isOpen: boolean, setIsOpen: (newState: boolean) => void }) {
     const actionData = useActionData<typeof action>()
     const isPending = useDelayedIsPending()
 
@@ -164,11 +183,18 @@ function CreateChannelDialog() {
         onValidate({ formData }) {
             return parseWithZod(formData, { schema: NewChannelSchema })
         },
-        shouldRevalidate: 'onBlur',
+        shouldValidate: 'onBlur',
+        shouldRevalidate: 'onInput',
+        defaultValue: initialFormValues
     })
 
+    useEffect(() => {
+        if (actionData?.result.status === "success")
+            setIsOpen(false)
+    }, [actionData?.result.status])
+
     return (
-        <Dialog>
+        <Dialog open={isOpen} modal={true} onOpenChange={setIsOpen}>
             <DialogTrigger
                 className="bg-muted h-6 w-6  text-muted-foreground transition rounded flex justify-center items-center 
             hover:text-foreground"
@@ -176,11 +202,11 @@ function CreateChannelDialog() {
                 <Icon name="plus" />
             </DialogTrigger>
             <DialogContent>
-                <Form method="POST" {...getFormProps(form)}>
-                    <DialogHeader>
+                <Form method="POST" {...getFormProps(form)} >
+                    <DialogHeader >
                         <DialogTitle className="text-foreground font-semibold text-lg">New Channel</DialogTitle>
                     </DialogHeader>
-                    <DialogDescription>
+                    <div>
                         <HoneypotInputs />
                         <Field
                             labelProps={{ children: 'Name' }}
@@ -215,7 +241,7 @@ function CreateChannelDialog() {
                         </div>
 
                         <ErrorList errors={form.errors} id={form.errorId} />
-                    </DialogDescription>
+                    </div>
                     <DialogFooter>
                         <StatusButton
                             className="w-full"
