@@ -5,7 +5,7 @@ import UserDropdown from "#app/components/user-dropdown";
 import UserImage from "#app/components/user-image";
 import { requireUser, requireUserId } from "#app/utils/auth.server";
 import { prisma } from "#app/utils/db.server";
-import { cn, useDelayedIsPending, useIsPending } from "#app/utils/misc";
+import { cn, useDelayedIsPending, useDoubleCheck, useIsPending } from "#app/utils/misc";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod";
 import { invariantResponse } from "@epic-web/invariant";
 import { Form, Link, useActionData, useFetcher, useLoaderData, useNavigation, useRevalidator } from "@remix-run/react";
@@ -15,12 +15,13 @@ import { formatRelative } from "date-fns";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { Field, CheckboxField, ErrorList, TextareaField } from "#app/components/forms";
-import { DialogHeader, DialogFooter, Dialog, DialogTrigger, DialogContent, DialogTitle } from "#app/components/ui/dialog";
+import { DialogHeader, DialogFooter, Dialog, DialogTrigger, DialogContent, DialogTitle, DialogPortal } from "#app/components/ui/dialog";
 import { useForm, getFormProps, getInputProps, getTextareaProps } from "@conform-to/react";
 import { HoneypotInputs } from "remix-utils/honeypot/react";
 
-const SEND_MESSAGE_INTENT = 'message'
-const UPDATE_CHANNEL_INTENT = 'update'
+const SEND_MESSAGE_INTENT = 'SEND_MESSAGE'
+const UPDATE_CHANNEL_INTENT = 'UPDATE_CHANNEL'
+const DELETE_CHANNEL_INTENT = 'DELETE_CHANNEL'
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
     await requireUserId(request)
@@ -107,6 +108,14 @@ async function updateChannelAction({ request, formData, channelName }:
     return redirectDocument(`/channels/${payload.name}`)
 }
 
+async function deleteChannelAction({ request, userId, channelName }:
+    { request: Request, userId: String, channelName?: string }) {
+    const channel = await prisma.channel.findUnique({ where: { name: channelName }, include: { private: true } })
+    invariantResponse(channel, 'Channel not found')
+    await prisma.channel.delete({ where: { name: channelName } })
+    return redirect('/channels')
+}
+
 async function sendMessageAction({ request, formData, channelName, userId }:
     { request: Request, formData: FormData, channelName?: string, userId: string }) {
 
@@ -138,6 +147,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
             return sendMessageAction({ request, formData, userId: user.id, channelName: params.channelName })
         case UPDATE_CHANNEL_INTENT:
             return updateChannelAction({ request, formData, channelName: params.channelName })
+        case DELETE_CHANNEL_INTENT:
+            return deleteChannelAction({ request, userId: user.id, channelName: params.channelName })
         default: {
             throw new Response(`Invalid intent "${intent}"`, { status: 400 })
         }
@@ -148,12 +159,9 @@ export default function ChannelPage() {
     const { channel, messages } = useLoaderData<typeof loader>()
     const revalidator = useRevalidator();
     const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const fetcher = useFetcher<typeof updateChannelAction>({ key: 'edit-channel' })
     const interval = revalidator.state === 'idle' ? 5000 : null
     useInterval(() => revalidator.revalidate(), interval);
-
-	const navigation = useNavigation()
-    const isLoading = navigation.state === 'loading'
-    console.log(navigation.state)
 
     return (
         <div className="flex h-full">
@@ -163,7 +171,7 @@ export default function ChannelPage() {
                         <Icon name="chevron-left" className="w-5 h-5 " /> All Channels
                     </Link>
                 </div>
-                <div className={cn(`flex flex-col flex-grow px-10 space-y-4`, { 'opacity-50': isLoading })}>
+                <div className={cn(`flex flex-col flex-grow px-10 space-y-4`)}>
                     <div>
                         <div className="flex space-x-4 items-center">
                             <h2 className="text-foreground text-lg font-bold my-3">{channel.name}</h2>
@@ -267,18 +275,19 @@ function MessageSender() {
     )
 }
 
-function EditChannelDialog({ isOpen, setIsOpen }:
-    { isOpen: boolean, setIsOpen: (newState: boolean) => void }) {
-    const fetcher = useFetcher<typeof updateChannelAction>()
+function EditChannelForm() {
+    const editFetcher = useFetcher<typeof updateChannelAction>({ key: 'edit-channel' })
+    const deleteFetcher = useFetcher<typeof deleteChannelAction>()
     const data = useLoaderData<typeof loader>()
-    const isPending = fetcher.state !== 'idle'
+    const isPending = editFetcher.state !== 'idle'
+
     const defaultValues = (({ name, description, private: isPrivate }) =>
         ({ name, description, isPrivate: !!isPrivate }))(data.channel)
 
     const [form, fields] = useForm({
         id: 'new-channel-form',
         constraint: getZodConstraint(EditChannelSchema),
-        lastResult: fetcher.data?.result,
+        lastResult: editFetcher.data?.result,
         onValidate({ formData }) {
             return parseWithZod(formData, { schema: EditChannelSchema })
         },
@@ -286,35 +295,83 @@ function EditChannelDialog({ isOpen, setIsOpen }:
         shouldRevalidate: 'onInput',
         defaultValue: defaultValues
     })
+    const dc = useDoubleCheck()
 
-    useEffect(() => {
-        if (fetcher.data?.result.status === "success") {
-            setIsOpen(false)
-        }
-    }, [fetcher.data?.result.status])
-    /**
-        const dc = useDoubleCheck()
-    
-        const fetcher = useFetcher<typeof deleteDataAction>()
-        return (
-            <div>
-                <fetcher.Form method="POST">
+    return (
+        <editFetcher.Form method="POST" {...getFormProps(form)}
+            className={cn({ 'opacity-50 animate-pulse pointer-events-none': editFetcher.state !== 'idle' })} >
+            <HoneypotInputs />
+            <Field
+                labelProps={{ children: 'Name' }}
+                inputProps={{
+                    ...getInputProps(fields.name, { type: 'text' }),
+                    autoFocus: true,
+                }}
+                errors={fields.name.errors}
+            />
+
+            <TextareaField
+                labelProps={{ children: 'Description' }}
+                textareaProps={{
+                    ...getTextareaProps(fields.description),
+                }}
+                errors={fields.description.errors}
+            />
+
+            <div className="flex justify-between">
+                <CheckboxField
+                    labelProps={{
+                        htmlFor: fields.isPrivate.id,
+                        children: 'Private',
+                    }}
+                    buttonProps={getInputProps(fields.isPrivate, {
+                        type: 'checkbox',
+                    })}
+                    errors={fields.isPrivate.errors}
+                />
+            </div>
+
+            <ErrorList errors={form.errors} id={form.errorId} />
+            <div className="flex justify-end space-x-4">
+                <StatusButton
+                    name="intent"
+                    value={UPDATE_CHANNEL_INTENT}
+                    className="w-fit"
+                    status={isPending ? 'pending' : 'idle'}
+                    type="submit"
+                    variant={"secondary"}
+                    disabled={isPending}
+                >
+                    Save
+                </StatusButton>
+                <deleteFetcher.Form method="POST">
                     <StatusButton
                         {...dc.getButtonProps({
                             type: 'submit',
                             name: 'intent',
-                            value: deleteDataActionIntent,
+                            value: DELETE_CHANNEL_INTENT,
                         })}
                         variant={dc.doubleCheck ? 'destructive' : 'default'}
-                        status={fetcher.state !== 'idle' ? 'pending' : 'idle'}
+                        status={editFetcher.state !== 'idle' ? 'pending' : 'idle'}
                     >
                         <Icon name="trash">
-                            {dc.doubleCheck ? `Are you sure?` : `Delete all your data`}
+                            {dc.doubleCheck ? `Are you sure?` : `Delete`}
                         </Icon>
                     </StatusButton>
-                </fetcher.Form>
+                </deleteFetcher.Form>
             </div>
-        )**/
+        </editFetcher.Form>
+    )
+}
+function EditChannelDialog({ isOpen, setIsOpen }:
+    { isOpen: boolean, setIsOpen: (newState: boolean) => void }) {
+    const fetcher = useFetcher<typeof updateChannelAction>({ key: 'edit-channel' })
+
+    useEffect(() => {
+        if (fetcher.data?.result.status === "success" && fetcher.state === 'idle') {
+            setIsOpen(false)
+        }
+    }, [fetcher.data?.result.status, fetcher.state])
     return (
         <Dialog open={isOpen} modal={true} onOpenChange={setIsOpen}>
             <DialogTrigger
@@ -324,58 +381,14 @@ function EditChannelDialog({ isOpen, setIsOpen }:
                 <Icon name={"pencil-1"} />
             </DialogTrigger>
             <DialogContent>
-                <fetcher.Form method="POST" {...getFormProps(form)} >
-                    <DialogHeader >
-                        <DialogTitle className="text-foreground font-semibold text-lg">Edit Channel</DialogTitle>
-                    </DialogHeader>
-                    <div className="my-4">
-                        <HoneypotInputs />
-                        <Field
-                            labelProps={{ children: 'Name' }}
-                            inputProps={{
-                                ...getInputProps(fields.name, { type: 'text' }),
-                                autoFocus: true,
-                            }}
-                            errors={fields.name.errors}
-                        />
-
-                        <TextareaField
-                            labelProps={{ children: 'Description' }}
-                            textareaProps={{
-                                ...getTextareaProps(fields.description),
-                            }}
-                            errors={fields.description.errors}
-                        />
-
-                        <div className="flex justify-between">
-                            <CheckboxField
-                                labelProps={{
-                                    htmlFor: fields.isPrivate.id,
-                                    children: 'Private',
-                                }}
-                                buttonProps={getInputProps(fields.isPrivate, {
-                                    type: 'checkbox',
-                                })}
-                                errors={fields.isPrivate.errors}
-                            />
-                        </div>
-
-                        <ErrorList errors={form.errors} id={form.errorId} />
-                    </div>
-                    <DialogFooter className="">
-                        <StatusButton
-                            name="intent"
-                            value={UPDATE_CHANNEL_INTENT}
-                            className="w-fit"
-                            status={isPending ? 'pending' : form.status ?? 'idle'}
-                            type="submit"
-                            variant={"secondary"}
-                            disabled={isPending}
-                        >
-                            Save
-                        </StatusButton>
-                    </DialogFooter>
-                </fetcher.Form>
+                <DialogHeader >
+                    <DialogTitle className="text-foreground font-semibold text-lg">Edit Channel</DialogTitle>
+                </DialogHeader>
+                <div className="my-4">
+                    <EditChannelForm />
+                </div>
+                <DialogFooter className="">
+                </DialogFooter>
             </DialogContent>
         </Dialog >
     )
