@@ -8,6 +8,7 @@ import { requireUser, requireUserId } from "#app/utils/auth.server";
 import { prisma } from "#app/utils/db.server";
 import { checkHoneypot } from "#app/utils/honeypot.server";
 import { getAbbreviation, getChannelImgSrc, useDelayedIsPending } from "#app/utils/misc";
+import { userHasPermission } from "#app/utils/user";
 import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod";
 import { Form, Link, useActionData, useLoaderData } from "@remix-run/react";
@@ -25,22 +26,27 @@ const ChannelSearchResultSchema = z.object({
 const ChannelSearchResultsSchema = z.array(ChannelSearchResultSchema)
 
 export async function loader({ request }: LoaderFunctionArgs) {
-    const userId = await requireUserId(request)
+    const user = await requireUser(request)
     const searchTerm = new URL(request.url).searchParams.get('search')
     if (searchTerm === '') {
         return redirect('/channels')
     }
 
     const like = `%${searchTerm ?? ''}%`
+    const isAdmin = userHasPermission(user, 'read:channel:any')
+
     const rawChannels = await prisma.$queryRaw`
 		SELECT DISTINCT Channel.id, Channel.name, ChannelImage.id AS ImageId
 		FROM Channel
         LEFT JOIN ChannelImage ON ChannelImage.channelId = Channel.id
         LEFT JOIN PrivateChannel on PrivateChannel.channelId = Channel.id
         LEFT JOIN Membership on Membership.channelId = PrivateChannel.channelId
-		WHERE Channel.name LIKE ${like}
-        AND (PrivateChannel.channelId is null OR Membership.userId = ${userId} OR Channel.ownerId = ${userId})
-		LIMIT 50
+		WHERE Channel.name LIKE ${like} 
+        AND ( PrivateChannel.channelId is null 
+        OR Membership.userId = ${user.id} 
+        OR Channel.ownerId = ${user.id} 
+        OR ${isAdmin ? 'TRUE' : 'FALSE'} ) 
+        LIMIT 50
 	`
 
     const result = ChannelSearchResultsSchema.safeParse(rawChannels)

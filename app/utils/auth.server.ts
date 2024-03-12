@@ -65,7 +65,12 @@ export async function requireUserId(
 
 export async function requireUser(request: Request) {
     const userId = await requireUserId(request)
-    const user = await prisma.user.findUnique({ where: { id: userId } })
+    const user = await prisma.user.findUnique(
+        {
+            include: { roles: { include: { permissions: true } } },
+            where: { id: userId }
+        }
+    )
     if (!user) {
         const requestUrl = new URL(request.url)
         const loginParams = new URLSearchParams([
