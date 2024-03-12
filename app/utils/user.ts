@@ -25,8 +25,8 @@ export function useUser() {
 }
 
 type Action = 'create' | 'read' | 'update' | 'delete'
-type Entity = 'user' | 'note'
-type Access = 'own' | 'any' | 'own,any' | 'any,own'
+type Entity = 'user' | 'channel' | 'message'
+type Access = 'own' | 'any' | 'own,any' | 'any,own' | 'public'
 export type PermissionString =
 	| `${Action}:${Entity}`
 	| `${Action}:${Entity}:${Access}`

@@ -18,13 +18,15 @@ import { Field, CheckboxField, ErrorList, TextareaField } from "#app/components/
 import { DialogHeader, DialogFooter, Dialog, DialogTrigger, DialogContent, DialogTitle, DialogPortal } from "#app/components/ui/dialog";
 import { useForm, getFormProps, getInputProps, getTextareaProps } from "@conform-to/react";
 import { HoneypotInputs } from "remix-utils/honeypot/react";
+import { requireUserWithPermission } from "#app/utils/permissions.server";
+import { redirectWithToast } from "#app/utils/toast.server";
 
 const SEND_MESSAGE_INTENT = 'SEND_MESSAGE'
 const UPDATE_CHANNEL_INTENT = 'UPDATE_CHANNEL'
 const DELETE_CHANNEL_INTENT = 'DELETE_CHANNEL'
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
-    await requireUserId(request)
+    const user = await requireUser(request)
     const channel = await prisma.channel.findFirst({
         include: {
             owner: {
@@ -48,6 +50,11 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
         },
         where: { name: params.channelName }
     })
+    invariantResponse(channel, 'Channel not found', { status: 404 })
+    const isPrivate = Boolean(channel.private)
+    const isOwner = channel.ownerId === user.id
+    const requiredPermission = isOwner ? 'read:channel:own' : !isPrivate ? 'read:channel:public' : 'read:channel:any'
+    await requireUserWithPermission(request, requiredPermission)
 
     const messages = await prisma.message.findMany({
         where: { channel: { name: params.channelName } },
@@ -56,7 +63,6 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
         take: 50
     })
 
-    invariantResponse(channel, 'Channel not found', { status: 404 })
 
     return json({ channel: channel, messages } as const)
 }
@@ -72,8 +78,8 @@ const EditChannelSchema = z.object({
 })
 
 
-async function updateChannelAction({ request, formData, channelName }:
-    { request: Request, formData: FormData, channelName?: string }) {
+async function updateChannelAction({ request, formData, channelName, userId }:
+    { request: Request, formData: FormData, channelName?: string, userId: string }) {
     const submission = parseWithZod(formData, { schema: EditChannelSchema })
     if (submission.status !== 'success') {
         return json(
@@ -83,6 +89,13 @@ async function updateChannelAction({ request, formData, channelName }:
     }
     const channel = await prisma.channel.findUnique({ where: { name: channelName }, include: { private: true } })
     invariantResponse(channel, 'Channel not found')
+    const isOwner = channel.ownerId === userId
+    try {
+        await requireUserWithPermission(request, isOwner ? 'delete:channel:own' : 'delete:channel:any')
+    } catch (error: unknown) {
+        return redirectWithToast(`/channels/${channel.name}`,
+            { type: 'error', title: 'Unauthorized', description: error?.data?.message ?? 'Unauthorized' })
+    }
     const { isPrivate, ...payload } = submission.value
     await prisma.channel.update({
         data: {
@@ -112,6 +125,13 @@ async function deleteChannelAction({ request, userId, channelName }:
     { request: Request, userId: String, channelName?: string }) {
     const channel = await prisma.channel.findUnique({ where: { name: channelName }, include: { private: true } })
     invariantResponse(channel, 'Channel not found')
+    const isOwner = channel.ownerId === userId
+    try {
+        await requireUserWithPermission(request, isOwner ? 'delete:channel:own' : 'delete:channel:any')
+    } catch (error: unknown) {
+        return redirectWithToast(`/channels/${channel.name}`,
+            { type: 'error', title: 'Unauthorized', description: error?.data?.message ?? 'Unauthorized' })
+    }
     await prisma.channel.delete({ where: { name: channelName } })
     return redirect('/channels')
 }
@@ -146,7 +166,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
         case SEND_MESSAGE_INTENT:
             return sendMessageAction({ request, formData, userId: user.id, channelName: params.channelName })
         case UPDATE_CHANNEL_INTENT:
-            return updateChannelAction({ request, formData, channelName: params.channelName })
+            return updateChannelAction({ request, formData, channelName: params.channelName, userId: user.id })
         case DELETE_CHANNEL_INTENT:
             return deleteChannelAction({ request, userId: user.id, channelName: params.channelName })
         default: {
@@ -276,10 +296,9 @@ function MessageSender() {
 }
 
 function EditChannelForm() {
-    const editFetcher = useFetcher<typeof updateChannelAction>({ key: 'edit-channel' })
-    const deleteFetcher = useFetcher<typeof deleteChannelAction>()
+    const fetcher = useFetcher<typeof updateChannelAction>({ key: 'edit-channel' })
     const data = useLoaderData<typeof loader>()
-    const isPending = editFetcher.state !== 'idle'
+    const isPending = fetcher.state !== 'idle'
 
     const defaultValues = (({ name, description, private: isPrivate }) =>
         ({ name, description, isPrivate: !!isPrivate }))(data.channel)
@@ -287,7 +306,7 @@ function EditChannelForm() {
     const [form, fields] = useForm({
         id: 'new-channel-form',
         constraint: getZodConstraint(EditChannelSchema),
-        lastResult: editFetcher.data?.result,
+        lastResult: fetcher.data?.result,
         onValidate({ formData }) {
             return parseWithZod(formData, { schema: EditChannelSchema })
         },
@@ -298,8 +317,8 @@ function EditChannelForm() {
     const dc = useDoubleCheck()
 
     return (
-        <editFetcher.Form method="POST" {...getFormProps(form)}
-            className={cn({ 'opacity-50 animate-pulse pointer-events-none': editFetcher.state !== 'idle' })} >
+        <fetcher.Form method="POST" {...getFormProps(form)}
+            className={cn({ 'opacity-50 animate-pulse pointer-events-none': fetcher.state !== 'idle' })} >
             <HoneypotInputs />
             <Field
                 labelProps={{ children: 'Name' }}
@@ -344,23 +363,22 @@ function EditChannelForm() {
                 >
                     Save
                 </StatusButton>
-                <deleteFetcher.Form method="POST">
-                    <StatusButton
-                        {...dc.getButtonProps({
-                            type: 'submit',
-                            name: 'intent',
-                            value: DELETE_CHANNEL_INTENT,
-                        })}
-                        variant={dc.doubleCheck ? 'destructive' : 'default'}
-                        status={editFetcher.state !== 'idle' ? 'pending' : 'idle'}
-                    >
-                        <Icon name="trash">
-                            {dc.doubleCheck ? `Are you sure?` : `Delete`}
-                        </Icon>
-                    </StatusButton>
-                </deleteFetcher.Form>
+                <StatusButton
+                    {...dc.getButtonProps({
+                        type: 'submit',
+                        name: 'intent',
+                        value: DELETE_CHANNEL_INTENT,
+                    })}
+                    variant={dc.doubleCheck ? 'destructive' : 'default'}
+                    status={fetcher.state !== 'idle' && fetcher.formData?.get('intent') === DELETE_CHANNEL_INTENT
+                        ? 'pending' : 'idle'}
+                >
+                    <Icon name="trash">
+                        {dc.doubleCheck ? `Are you sure?` : `Delete`}
+                    </Icon>
+                </StatusButton>
             </div>
-        </editFetcher.Form>
+        </fetcher.Form>
     )
 }
 function EditChannelDialog({ isOpen, setIsOpen }:
