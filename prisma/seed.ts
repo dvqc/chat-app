@@ -74,7 +74,7 @@ async function seed() {
                         create: Array.from({
                             length: faker.number.int({ min: 1, max: 2 }),
                         }).map(() => ({
-                            name: faker.word.adjective(),
+                            name: faker.word.noun() + 's',
                         })),
                     },
                 },
@@ -118,7 +118,7 @@ async function seed() {
                     },
                     {
                         id: '414f0c09',
-                        name: 'Coding',
+                        name: 'Code Crafters',
                     }],
             },
         },

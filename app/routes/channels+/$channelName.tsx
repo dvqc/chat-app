@@ -8,7 +8,7 @@ import { prisma } from "#app/utils/db.server";
 import { cn, useDelayedIsPending, useDoubleCheck, useIsPending } from "#app/utils/misc";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod";
 import { invariantResponse } from "@epic-web/invariant";
-import { Form, Link, useActionData, useFetcher, useLoaderData, useNavigation, useRevalidator } from "@remix-run/react";
+import { Form, Link, useActionData, useFetcher, useLoaderData, useMatches, useNavigation, useRevalidator } from "@remix-run/react";
 import { useInterval } from "usehooks-ts"
 import { type LoaderFunctionArgs, json, ActionFunctionArgs, redirect, redirectDocument } from "@remix-run/server-runtime";
 import { formatRelative } from "date-fns";
@@ -52,8 +52,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     })
     invariantResponse(channel, 'Channel not found', { status: 404 })
     const isPrivate = Boolean(channel.private)
-    const isOwner = channel.ownerId === user.id
-    const requiredPermission = isOwner ? 'read:channel:own' : !isPrivate ? 'read:channel:public' : 'read:channel:any'
+    const isOwner = channel.ownerId === user.id;
+    const isMember = Boolean(channel.private?.members.find(member => member.userId === user.id))
+    const requiredPermission = isOwner ? 'read:channel:own' : !isPrivate ?
+        'read:channel:public' : isMember ? 'read:channel:own' : 'read:channel:any'
     await requireUserWithPermission(request, requiredPermission)
 
     const messages = await prisma.message.findMany({
@@ -64,7 +66,14 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     })
 
 
-    return json({ channel: channel, messages } as const)
+    return json({
+        user: {
+            id: user.id, 
+            username: user.username,
+            canEdit: Boolean(user.roles.find(role => role.name === 'admin')) || user.id === channel.ownerId
+        },
+        channel, messages
+    } as const)
 }
 
 const NewMessageSchema = z.object({
@@ -176,10 +185,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 export default function ChannelPage() {
-    const { channel, messages } = useLoaderData<typeof loader>()
-    const revalidator = useRevalidator();
+    const { channel, messages, user } = useLoaderData<typeof loader>()
     const [isDialogOpen, setIsDialogOpen] = useState(false)
-    const fetcher = useFetcher<typeof updateChannelAction>({ key: 'edit-channel' })
+    const revalidator = useRevalidator()
     const interval = revalidator.state === 'idle' ? 5000 : null
     useInterval(() => revalidator.revalidate(), interval);
 
@@ -195,7 +203,7 @@ export default function ChannelPage() {
                     <div>
                         <div className="flex space-x-4 items-center">
                             <h2 className="text-foreground text-lg font-bold my-3">{channel.name}</h2>
-                            <EditChannelDialog isOpen={isDialogOpen} setIsOpen={setIsDialogOpen} />
+                            {user.canEdit && <EditChannelDialog isOpen={isDialogOpen} setIsOpen={setIsDialogOpen} />}
                         </div>
                         <p className="text-base font-normal">{channel.description}</p>
                     </div>

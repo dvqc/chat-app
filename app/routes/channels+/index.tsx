@@ -8,7 +8,7 @@ import { requireUser, requireUserId } from "#app/utils/auth.server";
 import { prisma } from "#app/utils/db.server";
 import { checkHoneypot } from "#app/utils/honeypot.server";
 import { getAbbreviation, getChannelImgSrc, useDelayedIsPending } from "#app/utils/misc";
-import { userHasPermission } from "#app/utils/user";
+import { userHasPermission, userHasRole } from "#app/utils/user";
 import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod";
 import { Form, Link, useActionData, useLoaderData } from "@remix-run/react";
@@ -33,7 +33,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
 
     const like = `%${searchTerm ?? ''}%`
-    const isAdmin = userHasPermission(user, 'read:channel:any')
+    const isAdmin = userHasRole(user, 'admin')
 
     const rawChannels = await prisma.$queryRaw`
 		SELECT DISTINCT Channel.id, Channel.name, ChannelImage.id AS ImageId
@@ -45,7 +45,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
         AND ( PrivateChannel.channelId is null 
         OR Membership.userId = ${user.id} 
         OR Channel.ownerId = ${user.id} 
-        OR ${isAdmin ? 'TRUE' : 'FALSE'} ) 
+        OR ${isAdmin ? true : false} ) 
         LIMIT 50
 	`
 
@@ -95,7 +95,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     const { isPrivate, ...values } = submission.value
     await prisma.channel.create({
         data: {
-            ...values, ownerId: user.id, ...(isPrivate ? {} : {
+            ...values, ownerId: user.id, ...(!isPrivate ? {} : {
                 private: {
                     create: {
                     }
@@ -166,9 +166,8 @@ export default function ChannelsLayout() {
             </aside>
             <main className="flex-1 bg-muted">
                 <div className="py-4 px-20 font-bold text-lg shadow-lg shadow-black/30 "><Icon size="lg" name="logo"></Icon>{" "}devChallenges Chat App</div>
-                <section className="px-20 py-14">
-                    <h1 className="text-4xl">Welcome to chat 🎊🎉</h1>
-                    <img className="my-10 max-w-xl w-full aspect-auto" src="/img/welcome.gif" alt="welcome meme" />
+                <section className="px-20 py-14 flex justify-center items-center">
+                    <img className="my-10 max-w-2xl w-full aspect-auto" src="/img/welcome.gif" alt="welcome meme" />
                 </section>
             </main>
         </div>
