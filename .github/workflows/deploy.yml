@@ -82,7 +82,7 @@ jobs:
           run_install: true
 
       - name: 🏄 Copy test env vars
-        run: cp .env.example .env
+        run: cp .env.test .env
 
       - name: 🖼 Build icons
         run: npm run build:icons
@@ -99,7 +99,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: 🏄 Copy test env vars
-        run: cp .env.example .env
+        run: cp .env.test .env
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
