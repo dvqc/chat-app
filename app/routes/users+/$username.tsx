@@ -36,7 +36,7 @@ export default function ProfileRoute() {
 	const isLoggedInUser = data.user.id === loggedInUser?.id
 
 	return (
-		<div className="container max-w-lg mb-48 mt-36 flex flex-col items-center justify-center">
+		<div className="container mb-48 mt-36 flex max-w-lg flex-col items-center justify-center">
 			<Spacer size="4xs" />
 
 			<div className="container flex flex-col items-center rounded-3xl bg-muted p-12">
@@ -75,7 +75,7 @@ export default function ProfileRoute() {
 							<>
 								<Button asChild>
 									<Link to="channels" prefetch="intent">
-										My channels 
+										My channels
 									</Link>
 								</Button>
 								<Button asChild>
@@ -87,7 +87,7 @@ export default function ProfileRoute() {
 						) : (
 							<Button asChild>
 								<Link to="channels" prefetch="intent">
-									{userDisplayName}'s channels 
+									{userDisplayName}'s channels
 								</Link>
 							</Button>
 						)}

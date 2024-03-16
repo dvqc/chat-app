@@ -1,5 +1,5 @@
-app = "epic-stack-e7c3"
-primary_region = "sjc"
+app = "devchallenges-chat-app"
+primary_region = "cdg"
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = [ ]

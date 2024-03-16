@@ -4,9 +4,9 @@ import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { ErrorList } from '#app/components/forms.tsx'
 import { SearchBar } from '#app/components/search-bar.tsx'
+import { requireUserId } from '#app/utils/auth.server'
 import { prisma } from '#app/utils/db.server.ts'
 import { cn, getUserImgSrc, useDelayedIsPending } from '#app/utils/misc.tsx'
-import { requireUserId } from '#app/utils/auth.server'
 
 const UserSearchResultSchema = z.object({
 	id: z.string(),
@@ -18,7 +18,7 @@ const UserSearchResultSchema = z.object({
 const UserSearchResultsSchema = z.array(UserSearchResultSchema)
 
 export async function loader({ request }: LoaderFunctionArgs) {
-    await requireUserId(request)
+	await requireUserId(request)
 	const searchTerm = new URL(request.url).searchParams.get('search')
 	if (searchTerm === '') {
 		return redirect('/users')
@@ -58,7 +58,7 @@ export default function UsersRoute() {
 		<div className="container mb-48 mt-36 flex flex-col items-center justify-center gap-6">
 			<h1 className="text-h1">Chat App Users</h1>
 			<div className="w-full max-w-[700px]">
-				<SearchBar route='/users' status={data.status} autoFocus autoSubmit />
+				<SearchBar route="/users" status={data.status} autoFocus autoSubmit />
 			</div>
 			<main>
 				{data.status === 'idle' ? (

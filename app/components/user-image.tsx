@@ -1,9 +1,17 @@
-import { getUserImgSrc } from "#app/utils/misc";
+import { getUserImgSrc } from '#app/utils/misc'
 
-export default function UserImage({ imageId, alt }: { imageId?: string | null, alt?: string | null }) {
-    return <img
-        className="w-10 h-10 object-cover rounded"
-        src={getUserImgSrc(imageId)}
-        alt={alt ?? 'user profile picture'}
-    />
+export default function UserImage({
+	imageId,
+	alt,
+}: {
+	imageId?: string | null
+	alt?: string | null
+}) {
+	return (
+		<img
+			className="h-10 w-10 rounded object-cover"
+			src={getUserImgSrc(imageId)}
+			alt={alt ?? 'user profile picture'}
+		/>
+	)
 }

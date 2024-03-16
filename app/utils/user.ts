@@ -44,6 +44,8 @@ export function parsePermissionString(permissionString: PermissionString) {
 	}
 }
 
+export type PermissionData = ReturnType<typeof parsePermissionString>
+
 export function userHasPermission(
 	user: Pick<ReturnType<typeof useUser>, 'roles'> | null | undefined,
 	permission: PermissionString,

@@ -14,7 +14,10 @@ export function getChannelImgSrc(imageId: string) {
 }
 
 export function getAbbreviation(text: string) {
-    return text.split(/ ^/).map(word => word[0].toUpperCase()).join('')
+	return text
+		.split(/ ^/)
+		.map(word => word[0].toUpperCase())
+		.join('')
 }
 
 export function getErrorMessage(error: unknown) {
