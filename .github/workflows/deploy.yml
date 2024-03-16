@@ -28,7 +28,10 @@ jobs:
           node-version: 20
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+          run_install: true
 
       - name: 🖼 Build icons
         run: npm run build:icons
@@ -49,7 +52,10 @@ jobs:
           node-version: 20
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+          run_install: true
 
       - name: 🖼 Build icons
         run: npm run build:icons
@@ -70,7 +76,10 @@ jobs:
           node-version: 20
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+          run_install: true
 
       - name: 🏄 Copy test env vars
         run: cp .env.example .env
@@ -98,7 +107,10 @@ jobs:
           node-version: 20
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+          run_install: true
 
       - name: 📥 Install Playwright Browsers
         run: npm run test:e2e:install
