@@ -34,10 +34,10 @@ jobs:
           run_install: true
 
       - name: 🖼 Build icons
-        run: npm run build:icons
+        run: pnpm run build:icons
 
       - name: 🔬 Lint
-        run: npm run lint
+        run: pnpm run lint
 
   typecheck:
     name: ʦ TypeScript
@@ -58,10 +58,10 @@ jobs:
           run_install: true
 
       - name: 🖼 Build icons
-        run: npm run build:icons
+        run: pnpm run build:icons
 
       - name: 🔎 Type check
-        run: npm run typecheck --if-present
+        run: pnpm run typecheck --if-present
 
   vitest:
     name: ⚡ Vitest
@@ -85,10 +85,10 @@ jobs:
         run: cp .env.test .env
 
       - name: 🖼 Build icons
-        run: npm run build:icons
+        run: pnpm run build:icons
 
       - name: ⚡ Run vitest
-        run: npm run test -- --coverage
+        run: pnpm run test -- --coverage
 
   playwright:
     name: 🎭 Playwright
@@ -113,10 +113,10 @@ jobs:
           run_install: true
 
       - name: 📥 Install Playwright Browsers
-        run: npm run test:e2e:install
+        run: pnpm run test:e2e:install
 
       - name: 🛠 Setup Database
-        run: npx prisma migrate deploy
+        run: pnpx prisma migrate deploy
 
       - name: 🏦 Cache Database
         id: db-cache
@@ -130,15 +130,15 @@ jobs:
 
       - name: 🌱 Seed Database
         if: steps.db-cache.outputs.cache-hit != 'true'
-        run: npx prisma db seed
+        run: pnpx prisma db seed
         env:
           MINIMAL_SEED: true
 
       - name: 🏗 Build
-        run: npm run build
+        run: pnpm run build
 
       - name: 🎭 Playwright tests
-        run: npx playwright test
+        run: pnpx playwright test
 
       - name: 📊 Upload report
         uses: actions/upload-artifact@v3
