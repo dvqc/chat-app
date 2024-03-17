@@ -61,7 +61,7 @@ jobs:
         run: pnpm run build:icons
 
       - name: 🔎 Type check
-        run: pnpm run typecheck --if-present
+        run: pnpm run typecheck 
 
   vitest:
     name: ⚡ Vitest
@@ -130,7 +130,7 @@ jobs:
 
       - name: 🌱 Seed Database
         if: steps.db-cache.outputs.cache-hit != 'true'
-        run: pnpx prisma db seed
+        run: pnpm prisma db seed
         env:
           MINIMAL_SEED: true
 

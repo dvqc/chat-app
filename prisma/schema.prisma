@@ -60,9 +60,9 @@ model PrivateChannel {
 }
 
 model Membership {
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId     String   
-  channel    PrivateChannel @relation(fields: [channelId], references: [channelId])
+  channel    PrivateChannel @relation(fields: [channelId], references: [channelId], onDelete: Cascade, onUpdate: Cascade)
   channelId  String
   joinedAt   DateTime @default(now())
 
