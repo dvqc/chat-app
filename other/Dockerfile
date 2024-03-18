@@ -61,7 +61,7 @@ RUN echo "#!/bin/sh\nset -x\nsqlite3 \$DATABASE_URL" > /usr/local/bin/database-c
 WORKDIR /myapp
 
 COPY --from=production-deps /myapp/node_modules /myapp/node_modules
-COPY --from=build /myapp/node_modules/.pnpm/@prisma* /myapp/node_modules/.pnpm/
+COPY --from=build /myapp/node_modules/.pnpm /myapp/node_modules/.pnpm
 
 COPY --from=build /myapp/server-build /myapp/server-build
 COPY --from=build /myapp/build /myapp/build
