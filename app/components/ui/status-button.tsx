@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useSpinDelay } from 'spin-delay'
 import { cn } from '#app/utils/misc.tsx'
 import { Button, type ButtonProps } from './button.tsx'
-import { Icon } from './icon.tsx'
+import { Icon, IconName } from './icon.tsx'
 import {
     Tooltip,
     TooltipContent,
@@ -16,19 +16,26 @@ export const StatusButton = React.forwardRef<
         status: 'pending' | 'success' | 'error' | 'idle'
         message?: string | null
         spinDelay?: Parameters<typeof useSpinDelay>[1]
+        idleIcon?: IconName
     }
->(({ message, status, className, children, spinDelay, ...props }, ref) => {
+>(({ message, status, className, children, spinDelay, idleIcon, ...props }, ref) => {
     const delayedPending = useSpinDelay(status === 'pending', {
         delay: 400,
         minDuration: 300,
         ...spinDelay,
     })
+
+    const idle = idleIcon ? <div className="inline-flex h-6 w-6 items-center justify-center">
+        <Icon name={idleIcon} />
+    </div>
+        : null
+    
     const companion = {
         pending: delayedPending ? (
             <div className="inline-flex h-6 w-6 items-center justify-center">
                 <Icon name="update" className="animate-spin" />
             </div>
-        ) : null,
+        ) : idle,
         success: (
             <div className="inline-flex h-6 w-6 items-center justify-center">
                 <Icon name="check" />
@@ -39,7 +46,7 @@ export const StatusButton = React.forwardRef<
                 <Icon name="cross-1" className="text-destructive-foreground" />
             </div>
         ),
-        idle: null,
+        idle
     }[status]
 
     return (
@@ -59,7 +66,7 @@ export const StatusButton = React.forwardRef<
                     </TooltipProvider>
                 </>
             ) :
-                <>{companion ?? null} {children}</>
+                <>{children} {companion}</>
             }
         </Button>
     )

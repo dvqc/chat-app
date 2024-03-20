@@ -74,7 +74,7 @@ export default function ProfileRoute() {
 						{isLoggedInUser ? (
 							<>
 								<Button asChild>
-									<Link to="channels" prefetch="intent">
+									<Link to={`/channels?owner=${user.username}`} prefetch="intent">
 										My channels
 									</Link>
 								</Button>
@@ -86,7 +86,7 @@ export default function ProfileRoute() {
 							</>
 						) : (
 							<Button asChild>
-								<Link to="channels" prefetch="intent">
+								<Link to={`/channels?owner=${user.username}`} prefetch="intent">
 									{userDisplayName}'s channels
 								</Link>
 							</Button>
