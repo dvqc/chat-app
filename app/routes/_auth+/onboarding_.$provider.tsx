@@ -191,7 +191,7 @@ export async function handleVerification({ submission }: VerifyFunctionArgs) {
 }
 
 export const meta: MetaFunction = () => {
-	return [{ title: 'Setup Epic Notes Account' }]
+	return [{ title: 'Setup devChallenges Chat App Account' }]
 }
 
 export default function SignupRoute() {

@@ -60,7 +60,7 @@ test('onboarding with link', async ({ page, getOnboardingData }) => {
 	const email = await readEmail(onboardingData.email)
 	invariant(email, 'Email not found')
 	expect(email.to).toBe(onboardingData.email.toLowerCase())
-	expect(email.from).toBe('hello@epicstack.dev')
+	expect(email.from).toBe('ibrahim.benfares@outlook.com')
 	expect(email.subject).toMatch(/welcome/i)
 	const onboardingUrl = extractUrl(email.text)
 	invariant(onboardingUrl, 'Onboarding URL not found')

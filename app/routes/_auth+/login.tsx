@@ -364,7 +364,7 @@ export default function LoginPage() {
 }
 
 export const meta: MetaFunction = () => {
-	return [{ title: 'Login to Epic Notes' }]
+	return [{ title: 'Login to devChallenges chat app' }]
 }
 
 export function ErrorBoundary() {

@@ -67,7 +67,7 @@ export const links: LinksFunction = () => {
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
 	return [
-		{ title: data ? 'Chat App | Dev Challenges' : 'Error | Chat App' },
+		{ title: data ? 'Chat App | devChallenges' : 'Error | Chat App' },
 		{ name: 'description', content: `Your own captain's log` },
 	]
 }

@@ -98,7 +98,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export const meta: MetaFunction = () => {
-	return [{ title: 'Reset Password | Epic Notes' }]
+	return [{ title: 'Reset Password | devChallenges Chat App' }]
 }
 
 export default function ResetPasswordPage() {
